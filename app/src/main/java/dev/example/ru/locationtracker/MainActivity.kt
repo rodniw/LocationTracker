@@ -24,6 +24,8 @@ private const val MY_PERMISSION_ACCESS_FINE_LOCATION = 2
 
 class MainActivity : AppCompatActivity() {
 
+    private var summ = 0
+
     private lateinit var locationManager: LocationManager
     private lateinit var getChangesListener: LocationListener
 
@@ -64,26 +66,22 @@ class MainActivity : AppCompatActivity() {
         location_writing_text.visibility = View.VISIBLE
 
         getChangesListener = object : LocationListener {
+            @SuppressLint("SetTextI18n")
             override fun onLocationChanged(location: Location?) {
                 prevLocation?.let { prevLocation ->
                     location?.let { currentLocation ->
-                        Toast.makeText(applicationContext, currentLocation.distanceTo(prevLocation).roundToInt().toString(), Toast.LENGTH_LONG).show()
+                        val distance = currentLocation.distanceTo(prevLocation).roundToInt()
+                        Toast.makeText(applicationContext, "$distance метра(-ов)", Toast.LENGTH_LONG).show()
+                        summ += distance
+                        location_summary.text = "Пройденное расстояние: $summ метра(-ов)"
                     } ?: run {  }
                 } ?: run { /*Toast.makeText(applicationContext, "start point is: ${prevLocation.latitude}", Toast.LENGTH_LONG).show()*/ }
                 prevLocation = location
             }
 
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-                TODO("Not yet implemented")
-            }
-
-            override fun onProviderEnabled(provider: String?) {
-                TODO("Not yet implemented")
-            }
-
-            override fun onProviderDisabled(provider: String?) {
-                TODO("Not yet implemented")
-            }
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String?) {}
+            override fun onProviderDisabled(provider: String?) {}
 
         }
         locationManager = this.getSystemService(LOCATION_SERVICE) as LocationManager

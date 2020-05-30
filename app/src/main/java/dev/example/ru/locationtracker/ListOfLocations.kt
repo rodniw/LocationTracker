@@ -9,4 +9,10 @@ class ListOfLocations : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_list_of_locations)
     }
+
+    override fun onResume() {
+        super.onResume()
+
+
+    }
 }
