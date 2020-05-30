@@ -2,6 +2,7 @@
   <dictionary name="Rodion.Prosvirnin">
     <words>
       <w>locationtracker</w>
+      <w>upsert</w>
     </words>
   </dictionary>
 </component>

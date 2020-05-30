@@ -5,8 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [], version = 1)
+@Database(entities = [LocationModel::class], version = 1)
 abstract class AppDatabase: RoomDatabase() {
+
+    abstract fun locationDao() : LocationDao
 
     companion object {
 

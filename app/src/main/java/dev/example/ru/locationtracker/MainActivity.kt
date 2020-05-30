@@ -3,13 +3,14 @@ package dev.example.ru.locationtracker
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.AsyncTask
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
@@ -17,14 +18,22 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.math.roundToInt
+
 
 private const val MY_PERMISSION_ACCESS_COARSE_LOCATION = 1
 private const val MY_PERMISSION_ACCESS_FINE_LOCATION = 2
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
 
     private var summ = 0
+
+    private var job: Job = Job()
+
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
 
     private lateinit var locationManager: LocationManager
     private lateinit var getChangesListener: LocationListener
@@ -41,6 +50,12 @@ class MainActivity : AppCompatActivity() {
 
         location_history_btn.setOnClickListener {
             startActivity(Intent(this, ListOfLocations::class.java))
+        }
+
+        location_history_clean_btn.setOnClickListener {
+            launch {
+                cleanDB()
+            }
         }
 
         location_start_tracking_btn.setOnClickListener{
@@ -60,6 +75,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun cleanDB() {
+        return withContext(Dispatchers.IO) {
+            return@withContext AppDatabase.getInstance(applicationContext).locationDao().cleanTable()
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun bindLocationManager() {
         location_start_tracking_btn.text = getString(R.string.stop_text)
@@ -71,6 +92,8 @@ class MainActivity : AppCompatActivity() {
                 prevLocation?.let { prevLocation ->
                     location?.let { currentLocation ->
                         val distance = currentLocation.distanceTo(prevLocation).roundToInt()
+                        val insertDBTask = InsertDBTask(applicationContext, distance)
+                        insertDBTask.execute()
                         Toast.makeText(applicationContext, "$distance метра(-ов)", Toast.LENGTH_LONG).show()
                         summ += distance
                         location_summary.text = "Пройденное расстояние: $summ метра(-ов)"
@@ -85,8 +108,16 @@ class MainActivity : AppCompatActivity() {
 
         }
         locationManager = this.getSystemService(LOCATION_SERVICE) as LocationManager
-        prevLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 0F, getChangesListener)
+        prevLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0F, getChangesListener)
+    }
+
+    internal class InsertDBTask(private val context: Context, private val distance: Int) : AsyncTask<Unit, Unit, Unit>() {
+        override fun doInBackground(vararg voids: Unit) {
+            AppDatabase.getInstance(context).locationDao().upsert(
+                LocationModel(distance.toString())
+            )
+        }
     }
 
     private fun hasLocationPermission(permission: String): Boolean {
@@ -115,5 +146,10 @@ class MainActivity : AppCompatActivity() {
         } else if(requestCode == MY_PERMISSION_ACCESS_FINE_LOCATION)
             if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) bindLocationManager()
             else Toast.makeText(this, getString(R.string.set_location_manually_text), Toast.LENGTH_LONG).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
     }
 }
