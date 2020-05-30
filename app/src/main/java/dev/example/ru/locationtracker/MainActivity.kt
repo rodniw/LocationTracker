@@ -9,6 +9,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlin.math.roundToInt
 
 private const val MY_PERMISSION_ACCESS_COARSE_LOCATION = 1
 private const val MY_PERMISSION_ACCESS_FINE_LOCATION = 2
@@ -24,6 +26,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var locationManager: LocationManager
     private lateinit var getChangesListener: LocationListener
+
+    private var prevLocation: Location? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,22 +58,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        if (requestCode == MY_PERMISSION_ACCESS_COARSE_LOCATION) {
-            if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                if (hasLocationPermission(ACCESS_FINE_LOCATION)) {
-                    bindLocationManager()
-                } else requestLocationPermission(ACCESS_FINE_LOCATION)
-            else Toast.makeText(this, getString(R.string.set_location_manually_text), Toast.LENGTH_LONG).show()
-        } else if(requestCode == MY_PERMISSION_ACCESS_FINE_LOCATION)
-            if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) bindLocationManager()
-            else Toast.makeText(this, getString(R.string.set_location_manually_text), Toast.LENGTH_LONG).show()
-    }
-
     @SuppressLint("MissingPermission")
     private fun bindLocationManager() {
         location_start_tracking_btn.text = getString(R.string.stop_text)
@@ -77,7 +65,12 @@ class MainActivity : AppCompatActivity() {
 
         getChangesListener = object : LocationListener {
             override fun onLocationChanged(location: Location?) {
-                Toast.makeText(applicationContext, location?.latitude.toString(), Toast.LENGTH_LONG).show()
+                prevLocation?.let { prevLocation ->
+                    location?.let { currentLocation ->
+                        Toast.makeText(applicationContext, currentLocation.distanceTo(prevLocation).roundToInt().toString(), Toast.LENGTH_LONG).show()
+                    } ?: run {  }
+                } ?: run { /*Toast.makeText(applicationContext, "start point is: ${prevLocation.latitude}", Toast.LENGTH_LONG).show()*/ }
+                prevLocation = location
             }
 
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
@@ -94,7 +87,8 @@ class MainActivity : AppCompatActivity() {
 
         }
         locationManager = this.getSystemService(LOCATION_SERVICE) as LocationManager
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0F, getChangesListener)
+        prevLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 0F, getChangesListener)
     }
 
     private fun hasLocationPermission(permission: String): Boolean {
@@ -107,5 +101,21 @@ class MainActivity : AppCompatActivity() {
             arrayOf(permission),
             MY_PERMISSION_ACCESS_COARSE_LOCATION
         )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == MY_PERMISSION_ACCESS_COARSE_LOCATION) {
+            if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                if (hasLocationPermission(ACCESS_FINE_LOCATION)) {
+                    bindLocationManager()
+                } else requestLocationPermission(ACCESS_FINE_LOCATION)
+            else Toast.makeText(this, getString(R.string.set_location_manually_text), Toast.LENGTH_LONG).show()
+        } else if(requestCode == MY_PERMISSION_ACCESS_FINE_LOCATION)
+            if(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) bindLocationManager()
+            else Toast.makeText(this, getString(R.string.set_location_manually_text), Toast.LENGTH_LONG).show()
     }
 }
