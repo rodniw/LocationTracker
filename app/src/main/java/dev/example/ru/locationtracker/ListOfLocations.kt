@@ -1,16 +1,10 @@
 package dev.example.ru.locationtracker
 
-import android.content.Context
-import android.os.AsyncTask
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_list_of_locations.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
