@@ -84,6 +84,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
     }
 
+    private suspend fun insertDBTask(context: Context, distance: Int) {
+        return withContext(Dispatchers.IO) {
+            return@withContext AppDatabase.getInstance(context).locationDao().upsert(
+                LocationModel(distance.toString())
+            )
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun bindLocationManager() {
         location_start_tracking_btn.text = getString(R.string.stop_text)
@@ -104,8 +112,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 prevLocation?.let { prevLocation ->
                     location?.let { currentLocation ->
                         val distance = currentLocation.distanceTo(prevLocation).roundToInt()
-                        val insertDBTask = InsertDBTask(applicationContext, distance)
-                        insertDBTask.execute()
+                        launch {
+                            insertDBTask(applicationContext, distance)
+                        }
                         Toast.makeText(applicationContext, "$distance метра(-ов)", Toast.LENGTH_LONG).show()
                         summ += distance
                         location_summary.text = "Пройденное расстояние: $summ метра(-ов)"
@@ -123,14 +132,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         prevLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
         //long minTime, float minDistance, @NonNull Criteria criteria, @NonNull LocationListener listener, @Nullable Looper looper
         locationManager.requestLocationUpdates(10000L, 0F, criteria, getChangesListener, null)
-    }
-
-    internal class InsertDBTask(private val context: Context, private val distance: Int) : AsyncTask<Unit, Unit, Unit>() {
-        override fun doInBackground(vararg voids: Unit) {
-            AppDatabase.getInstance(context).locationDao().upsert(
-                LocationModel(distance.toString())
-            )
-        }
     }
 
     private fun hasLocationPermission(permission: String): Boolean {
