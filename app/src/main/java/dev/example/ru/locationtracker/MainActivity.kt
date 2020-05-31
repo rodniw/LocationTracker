@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Criteria
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -56,6 +57,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             launch {
                 cleanDB()
             }
+            summ = 0
+            location_summary.text = "Пройденное расстояние: 0"
         }
 
         location_start_tracking_btn.setOnClickListener{
@@ -86,6 +89,15 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         location_start_tracking_btn.text = getString(R.string.stop_text)
         location_writing_text.visibility = View.VISIBLE
 
+        val criteria = Criteria()
+        criteria.accuracy = Criteria.ACCURACY_FINE
+        criteria.powerRequirement = Criteria.POWER_HIGH
+        criteria.isAltitudeRequired = false
+        criteria.isSpeedRequired = false
+        criteria.isCostAllowed = true
+        criteria.isBearingRequired = false
+        criteria.horizontalAccuracy = Criteria.ACCURACY_HIGH
+
         getChangesListener = object : LocationListener {
             @SuppressLint("SetTextI18n")
             override fun onLocationChanged(location: Location?) {
@@ -109,7 +121,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
         locationManager = this.getSystemService(LOCATION_SERVICE) as LocationManager
         prevLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000L, 0F, getChangesListener)
+        //long minTime, float minDistance, @NonNull Criteria criteria, @NonNull LocationListener listener, @Nullable Looper looper
+        locationManager.requestLocationUpdates(10000L, 0F, criteria, getChangesListener, null)
     }
 
     internal class InsertDBTask(private val context: Context, private val distance: Int) : AsyncTask<Unit, Unit, Unit>() {
